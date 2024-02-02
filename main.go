@@ -64,7 +64,7 @@ func main() {
 
 		// List and delete resources in batches
 		// Replace the batch size with your desired value
-		batchSize := int64(10) // Example batch size
+		batchSize := int64(100) // Example batch size
 
 		listOpts := metav1.ListOptions{Limit: batchSize}
 		for {
@@ -101,18 +101,20 @@ func processItem(dynamicClient *dynamic.DynamicClient, gvr schema.GroupVersionRe
 	defer wg.Done() // Notify the WaitGroup that this goroutine is done
 
 	// Perform the deletion
-	err := dynamicClient.Resource(gvr).Namespace(name).Delete(context.Background(), item.GetName(), metav1.DeleteOptions{})
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to delete %s: %v\n", item.GetName(), err)
-	} else {
-		fmt.Printf("Deleted %s\n", item.GetName())
-	}
-
 	if len(item.GetFinalizers()) > 0 {
 		item, _ := dynamicClient.Resource(gvr).Namespace(name).Get(context.Background(), item.GetName(), metav1.GetOptions{})
 		item.SetFinalizers(nil)
 		if _, err := dynamicClient.Resource(gvr).Namespace(name).Update(context.Background(), item, metav1.UpdateOptions{}); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to remove finalizer %s: %v\n", item.GetName(), err)
+		} else {
+			fmt.Printf("Remove finalizer  %s\n", item.GetName())
 		}
+	}
+
+	err := dynamicClient.Resource(gvr).Namespace(name).Delete(context.Background(), item.GetName(), metav1.DeleteOptions{})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to delete %s: %v\n", item.GetName(), err)
+	} else {
+		fmt.Printf("Deleted %s\n", item.GetName())
 	}
 }
